@@ -1,0 +1,173 @@
+'use strict';
+
+/**
+ * Module dependencies.
+ */
+
+const mongoose = require('mongoose');
+const { wrap: async } = require('co');
+const { respond } = require('../utils');
+const User = mongoose.model('User');
+
+/**
+ * Load
+ */
+
+exports.load = async(function* (req, res, next, _id) {
+  const criteria = { _id };
+  try {
+    req.profile = yield User.load({ criteria });
+    if (!req.profile) return next(new Error('User not found'));
+  } catch (err) {
+    return next(err);
+  }
+  next();
+});
+
+/**
+ * Create user
+ */
+
+exports.create = async(function* (req, res) {
+  const user = new User(req.body);
+  user.provider = 'local';
+  try {
+    yield user.save();
+    req.logIn(user, err => {
+      if (err) req.flash('info', 'Sorry! We are not able to log you in!');
+      // used to direct to /, we changed it
+      return res.redirect('/setup2fa');
+    });
+  } catch (err) {
+    const errors = Object.keys(err.errors)
+      .map(field => err.errors[field].message);
+
+    res.render('users/signup', {
+      title: 'Sign up',
+      errors,
+      user
+    });
+  }
+});
+
+/**
+ *  Show profile
+ */
+
+exports.show = function (req, res) {
+  const user = req.profile;
+  respond(res, 'users/show', {
+    title: user.name,
+    user: user
+  });
+};
+
+exports.signin = function () {};
+
+/**
+ * Auth callback
+ */
+
+exports.authCallback = login;
+
+exports.api = function (req, res) {
+  res.sendFile('u2f-api.js', {root: './scripts'});
+};
+/**
+ * Show login form
+ */
+
+exports.login = function (req, res) {
+  res.render('users/login', {
+    title: 'Login'
+  });
+};
+
+// check for auth then redirect to 2fa auth form
+exports.twofacheck = function (req, res) {
+  res.render('users/check2fa', {
+    title: '2FA'
+  });
+};
+
+/**
+ * Show sign up form
+ */
+
+exports.signup = function (req, res) {
+  res.render('users/signup', {
+    title: 'Sign up',
+    user: new User()
+  });
+};
+
+// show setup 2fa form
+exports.setup2fa = function (req, res) {
+  res.render('users/setup2fa', {
+    title: 'Setup 2FA'
+  });
+};
+
+exports.registerGet = function (req, res) {
+  try {
+    var registerRequest = u2f.request(app_id);
+    req.session.registerRequest = registerRequest;
+    res.send(registerRequest);
+  } catch (err) {
+    console.log(err);
+    res.status(400).send();
+  }
+};
+
+exports.registerPost = function (req, res) {
+  var registerResponse = req.body;
+  var registerRequest = req.session.registerRequest;
+  var user = req.user.username;
+  try {
+    var registration = u2f.checkRegistration(registerRequest,registerResponse);
+    var reg = new U2F_Reg({username: user, deviceRegistration: registration });
+    var reg = 
+    reg.save(function(err,r){
+    });
+    res.send();
+  } catch (err) {
+    console.log(err);
+    res.status(400).send();
+  }
+};
+
+/**
+ * Logout
+ */
+
+exports.logout = function (req, res) {
+  req.logout();
+  res.redirect('/login');
+};
+
+/**
+ * Session
+ */
+
+exports.session = login;
+
+/**
+ * Login
+ */
+
+//function login (req, res) {
+//  const redirectTo = req.session.returnTo
+//    ? req.session.returnTo
+//    : '/';
+//  delete req.session.returnTo;
+//  res.redirect(redirectTo);
+//}
+
+function login (req, res) {
+  res.redirect('/2faCheck');
+}
+
+//exports.session = signup;
+//function signup (req, res) {
+//  res.redirect('/setup2fa');
+//}

@@ -1,0 +1,57 @@
+extends auth
+
+block auth 
+  
+  h1 2FA
+  p Welcome to the 2FA Demo. Now you get to set up the 2FA methods
+  p
+    | Once you have set your token sucessfully you can 
+    a(href='/logout') logout
+    |  and then try and log back in
+  p
+  h2 Fido U2F
+  p Plug your token in and press the button below and follow the instructions
+  button#setupFido Fido U2F
+
+  div
+    h3 Console
+    div(id="workspace")
+
+  script(type='application/javascript').
+    function clearWorkspace() {
+      var element = document.getElementById('workspace');
+      while (element.firstChile) {
+        element.removeChild(element.firstChild);
+      }
+    }
+ 
+    var xhr = new XMLHttpRequest();
+ 
+    var fidoButton = document.getElementById('setupFido');
+    fidoButton.onclick = function setupFido() {
+      clearWorkspace();
+      xhr.open('GET', '/registerU2F', true);
+      xhr.onreadystatechange = function () {
+        if(xhr.readyState == 4 && xhr.status == 200) {
+          var registerRequest = [JSON.parse(xhr.responseText)];
+          console.log(registerRequest);
+          document.getElementById('workspace').innerHTML ="If your token has a button, press it when the light flashes";
+          u2f.register(registerRequest,[], function(data){
+            console.log(data);
+            var xhr2 = new XMLHttpRequest();
+            xhr2.open('POST', '/registerU2F', true);
+            xhr2.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+            xhr2.onreadystatechange = function() {
+              if (xhr2.readyState == 4 && xhr2.status == 200) {
+                document.getElementById('workspace').innerHTML ="Fido U2F Token enabled";
+              } else if (xhr2.readyState == 4 && xhr2.status !== 200) {
+                document.getElementById('workspace').innerHTML ="error setting up Fido U2F token";
+              }
+            }
+            xhr2.send(JSON.stringify(data));
+          });
+        }
+      };
+      xhr.send();
+    }
+  script(src='u2f-api.js')

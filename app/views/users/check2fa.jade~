@@ -1,0 +1,63 @@
+extends auth
+
+block auth
+  .text-center
+    h1 Connect your token provider, then press the button to continue 
+    button#fidoButton C Y B E R B O I
+  
+    p If the light flashes on your token please press the button
+script(src='u2f-api.js', type='text/javascript')
+script(type='text/javascript').
+  var fidoButton = document.getElementById('fidoButton');
+  fidoButton.onclick = function() {
+  document.getElementById('fido').style.visibility = "visible";
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/authenticateU2F', true);
+  xhr.onreadystatechange = function() {
+  if (xhr.readyState == 4 && xhr.status == 200) {
+  var signRequests = [JSON.parse(xhr.responseText)];
+  console.log(signRequests[0]);
+  try {
+  u2f.sign(signRequests,function(data){
+  console.log(data);
+  if (!data.errorCode) {
+  var xhr2 = new XMLHttpRequest();
+  xhr2.open('POST', '/authenticateU2F', true);
+  xhr2.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+  xhr2.onreadystatechange = function() {
+  if (xhr2.readyState == 4 && xhr2.status == 200) {
+  //redirect to /user
+  window.location = '/user';
+  } else if (xhr2.readyState == 4 && xhr2.status !== 200) {
+  //redirect to /logout
+  //window.location = '/logout';
+  console.log("failed");
+  }
+  };
+  xhr2.send(JSON.stringify(data));
+  } else {
+  document.getElementById('fido').innerHTML = "Token error: " + data.errorMessage;
+  }
+  },3000);
+  } catch (err) {
+  console.log("Catch err - " + err );
+  }
+  }
+  }
+  xhr.send();
+  }
+  var submitG2FA = document.getElementById('submitG2FA');
+  submitG2FA.onclick = function() {
+  var code = document.getElementById('code').value;
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/loginG2FA', true);
+  xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+  xhr.onreadystatechange = function() {
+  if (xhr.readyState == 4 && xhr.status == 200) {
+  window.location = '/user';
+  } else if (xhr.readyState == 4 && xhr.status !== 200) {
+  window.location = '/logout';
+  }
+  }
+  xhr.send('code='+code);
+  }

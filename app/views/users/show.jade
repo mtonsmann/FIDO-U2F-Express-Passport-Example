@@ -1,0 +1,10 @@
+extends ../layouts/default
+
+block main
+  - var name = user.name ? user.name : user.username
+  h1 = name
+block content
+  - var name = user.name ? user.name : user.username
+  h1 Your Profile
+  p Hello #{name}
+  p TODO: show username and email address

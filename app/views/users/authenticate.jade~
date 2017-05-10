@@ -1,0 +1,22 @@
+html
+  head
+    title U2F Shit
+    script(src='./u2f-api.js')
+    script.
+      var request = ${data};
+      setTimeout(function() {
+      u2f.sign(request.authneticateRequests,
+      function(data) {
+      if(data.errorCode) {
+      alert("U2F failed with error code: " + data.errorCode);
+      return;
+      }
+      document.getElementById('tokenResponse').value = JSON.stringify(data);
+      document.getElementById('form').submit();
+      });
+      }, 1000);
+    body
+      p Touch your U2F token to authenticate.
+      form#form(method='POST', action='finishAuthentication')
+        input#tokenResponse(type='hidden', name='tokenResponse')
+        input#username(type='hidden', name='username', value='${username}')
